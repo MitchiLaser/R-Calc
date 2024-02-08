@@ -1,0 +1,96 @@
+html,
+body{
+	margin: 0;
+	border: none;
+	padding: 0;
+	font-family: sans-serif;
+	width: 100vw;
+	height: 100vh;
+}
+body{
+	display: flex;
+	flex-direction: column;
+}
+body > *{
+	flex: 0 0 auto;
+	display: block;
+	padding: 0 5vw;
+	width: calc(100vw - 2 * 5 vw);
+	color: #fff;
+	background-color: #00796B;
+}
+body > header{
+	font-size: 1.2rem;
+}
+/*Alignment might be disturbed by margins or paddings of objects in the header*/
+body > header > *{
+	padding: initial 0;
+	margin: initial 0;
+}
+header > h1{
+	font-size: 3.2rem;
+	letter-spacing: .2rem;
+	margin-bottom: 0;
+	padding-bottom: 0;
+}
+/*Footer contains multiple entries which should be spread over the width of the whole page*/
+body > footer{
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+body > footer *{
+	display: inline;
+	padding; 0;
+}
+/*main content keeps its white background but has same space to the side as header and footer*/
+main{
+	padding: 0 5vw;
+	flex: 1 1 auto;
+	background-color: #fff;
+	color: #000;
+}
+ul.selection_row{
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	margin: 0 0;
+	padding: 0 0;
+}
+ul.selection_row li{
+	display: inline;
+	padding: 0 5px;
+	margin: 0 1vw;
+	border: 2px solid #B2DFDB;
+	border-radius: 10px;
+	width: 3rem;
+	text-align: center;
+}
+ul.selection_row li:first-of-type{
+	margin-left: 0;
+}
+ul.selection_row li:last-of-type{
+	margin-right: 0;
+}
+ul.selection_row li:hover{
+	background-color: #B2DFDB;
+}
+/*one of these selection variables can be set as active*/
+ul.selection_row li.selected{
+	color: #fff;
+	background-color: #00796B;
+	border-color: #00796B;
+}
+
+/*Overwrite browser defaults for hyperlinks*/
+a{
+	text-decoration-line: none;
+	text-decoration: none;
+	color: inherit;
+	cursor: pointer;
+}
+a:link,
+a:active,
+a:hover{
+	color: #B2DFDB;
+}
