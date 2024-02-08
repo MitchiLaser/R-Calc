@@ -2,6 +2,9 @@
 
 R-Calc is a tool designed to calculate resistor networks aiming to approximate a given equivalent resistance as closely as possible.
 
+Currently under development!:
+[Visit R-Calc on Github Pages](https://mitchilaser.github.io/R-Calc/)
+
 ## Example
 
 Suppose you require a 608kΩ resistor, but the closest available option in the E96 resistor series is 604kΩ. R-Calc can help find combinations of resistors to achieve a resistance close to 608kΩ:
