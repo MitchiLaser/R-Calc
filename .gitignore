@@ -1,2 +1,5 @@
 # VS-Code settings
 .vscode
+
+# ignore jupyter-notebook checkpoints
+.ipynb_checkpoints/
