@@ -7,7 +7,7 @@ Currently under development!:
 
 ## Example
 
-Suppose you require a 608kΩ resistor, but the closest available option in the E96 resistor series is 604kΩ. R-Calc can help find combinations of resistors to achieve a resistance close to 608kΩ:
+Suppose you require a 608kΩ resistor, but the closest available option in the E24 resistor series is 604kΩ. R-Calc can help find combinations of resistors to achieve a resistance close to 608kΩ:
 
 |         Resistor combination         | deviation |
 |:------------------------------------:|:---------:|

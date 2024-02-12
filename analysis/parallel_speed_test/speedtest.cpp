@@ -18,16 +18,15 @@ resistor_type parallel_alternative(resistor_type r1, resistor_type r2) {
 
 void runtime_measurement(resistor_type *Series, resistor_type (*test_function)(resistor_type, resistor_type)) {
 	resistor_type calc_results[series_max_power * 96][series_max_power * 96]; // allocate memory first
-	chrono::steady_clock::time_point begin = std::chrono::steady_clock::now(); // start time measurement
+	chrono::steady_clock::time_point begin = chrono::steady_clock::now(); // start time measurement
 	for(int i = 0; i < 96; i++) {
 		for (int j = 0; j < 96; j++) {
 			calc_results[i][j] = test_function(Series[i], Series[j]);
 		}
 	}
-	chrono::steady_clock::time_point end = std::chrono::steady_clock::now(); // stop time measurement
+	chrono::steady_clock::time_point end = chrono::steady_clock::now(); // stop time measurement
 	// print time difference
-	//std::cout << "Runtime  = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
-	std::cout << "Runtime  = " << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]" << std::endl;
+	cout << "Runtime  = " << chrono::duration_cast<chrono::nanoseconds> (end - begin).count() << "[ns]" << endl;
 }
 
 int main(int argc, char **argv) {
