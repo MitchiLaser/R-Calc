@@ -1,3 +1,7 @@
+:root{
+	--primary: #00796B;
+	--secondary: #B2DFDB;
+}
 html,
 body{
 	margin: 0;
@@ -15,9 +19,9 @@ body > *{
 	flex: 0 0 auto;
 	display: block;
 	padding: 0 5vw;
-	width: calc(100vw - 2 * 5 vw);
+	width: calc(100vw - 2 * 5vw);
 	color: #fff;
-	background-color: #00796B;
+	background-color: var(--primary);)
 }
 body > header{
 	font-size: 1.2rem;
@@ -61,7 +65,7 @@ ul.selection_row li{
 	display: inline;
 	padding: 0 5px;
 	margin: 0 1vw;
-	border: 2px solid #B2DFDB;
+	border: 2px solid var(--secondary);
 	border-radius: 10px;
 	width: 3rem;
 	text-align: center;
@@ -73,15 +77,40 @@ ul.selection_row li:last-of-type{
 	margin-right: 0;
 }
 ul.selection_row li:hover{
-	background-color: #B2DFDB;
+	background-color: var(--secondary);
 }
 /*one of these selection variables can be set as active*/
 ul.selection_row li.selected{
 	color: #fff;
-	background-color: #00796B;
-	border-color: #00796B;
+	background-color: var(--primary);
+	border-color: var(--primary);
 }
-
+/*Make the labels look clickable for the user*/
+label{
+	cursor: pointer;
+}
+/*Radio Buttons*/
+input[type="radio"]{
+	margin: auto 0.5rem auto 1rem;
+	box-sizing: border-box;
+	height: 1em;
+	width: 1em;
+	vertical-align: baseline;
+	appearance: none;
+	color: var(--secondary);)
+	background-color: #fff;
+	border: 2px solid currentColor;
+	border-radius: 50%;
+	outline: 2px solid currentColor;
+	outline-offset: 3px;
+}
+input[type="radio"]:hover{
+	background-color: currentColor;
+}
+input[type="radio"]:checked{
+	color: var(--primary);
+	background-color: currentColor;
+}
 /*Overwrite browser defaults for hyperlinks*/
 a{
 	text-decoration-line: none;
@@ -92,5 +121,5 @@ a{
 a:link,
 a:active,
 a:hover{
-	color: #B2DFDB;
+	color: var(--secondary);
 }

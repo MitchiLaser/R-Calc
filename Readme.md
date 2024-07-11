@@ -3,7 +3,7 @@
 R-Calc is a tool designed to calculate resistor networks aiming to approximate a given equivalent resistance as closely as possible.
 
 Currently under development!:
-[Visit R-Calc on Github Pages](https://mitchilaser.github.io/R-Calc/)
+[Try R-Calc on Github Pages](https://mitchilaser.github.io/R-Calc/)
 
 ## Example
 
