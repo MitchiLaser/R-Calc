@@ -13,18 +13,18 @@
 		<main>
 			<section>
 				<h1>Choose E-Series</h1>
-				<ul class="selection_row"><!--Placeholder--></ul>
+				<ul class="selection_row"></ul>
 			</section>
 			<section>
 				<h1>Required Resistance</h1><!-- TODO: better style for the input fields -->
 				<p>
-					<input type="number" id="resistance" step="0.01" min="0.01" max="1000" placeholder="required resistance">
+					<input type="number" id="resistance" step="0.01" min="0.01" max="1000" placeholder="Resistance">
 					<input type="radio" name="unit" id="radio_ohm"> <label for="radio_ohm">&Omega;</label>
 					<input type="radio" name="unit" id="radio_kohm" checked="checked"> <label for="radio_kohm">k&Omega;</label>
 				</p>
 			</section>
-			<section><!--  TODO: better style for the input fields -->
-				<p><input type="button" value="Calculate"></p>
+			<section>
+				<p><input type="button" value="Calculate" id="submitbutton"></p>
 			</section>
 		</main>
 		<footer>
