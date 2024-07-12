@@ -47,14 +47,14 @@ window.addEventListener("load", function(){
 			this.self = self;							// the resistor value or a combination
 			this.other = undefined;				// the other resistor value or combination
 			this.combinator = undefined;	// the combinator used to combine the two objects (series or parallel)
-			// the intermediate result of the combination for a quick lookup
-			this.intermediate = (self instanceof b_node)?self.intermediate:self;
+			this.intermediate = (self instanceof b_node)?self.intermediate:self; // the intermediate result of the combination for a quick lookup
 		}
 
 		attach(other, combinator) { // insert other branch or leaf into the tree
 			this.other = other;
 			this.combinator = combinator;
-			this.intermediate = combinator(this.intermediate, other.intermediate);
+			// update intermediate with the newly attached value (possibly overwrite old intermediate value)
+			this.intermediate = combinator((this.self instanceof b_node)?this.self.intermediate:this.self, (other instanceof b_node)?other.intermediate:other);
 		}
 
 		comb2str() { // return a string representation of the combinator
