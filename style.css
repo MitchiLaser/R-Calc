@@ -133,11 +133,32 @@ input[type="button"]{
 	color: var(--primary);
 	padding: calc(0.5em + 2px);
 	cursor: pointer;
+	font-weight: bold;
 }
 input[type="button"]:hover{
 	background-color: var(--primary);
 	border-color: var(--primary);
 	color: #fff;
+}
+/*Make the results only visible when a result was calculated*/
+#results{
+	visibility: collapse;
+}
+/*Table where the results are stored in*/
+table{
+	border-collapse: collapse;
+	border: solid 2px var(--primary);
+	border-radius: 10px;
+	margin: 2vh 0;
+}
+table td{
+	border: solid 1px var(--primary);
+	padding: calc(0.5em + 2px);
+	text-align: center;
+}
+table thead td{
+	background-color: var(--secondary);
+	/*font-weight: bold;*/
 }
 /*Overwrite browser defaults for hyperlinks*/
 a{
