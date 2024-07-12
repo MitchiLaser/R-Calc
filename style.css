@@ -21,16 +21,12 @@ body > *{
 	padding: 0 5vw;
 	width: calc(100vw - 2 * 5vw);
 	color: #fff;
-	background-color: var(--primary);)
+	background-color: var(--primary);
 }
 body > header{
 	font-size: 1.2rem;
 }
 /*Alignment might be disturbed by margins or paddings of objects in the header*/
-body > header > *{
-	padding: initial 0;
-	margin: initial 0;
-}
 header > h1{
 	font-size: 3.2rem;
 	letter-spacing: .2rem;
@@ -45,7 +41,7 @@ body > footer{
 }
 body > footer *{
 	display: inline;
-	padding; 0;
+	padding: 0;
 }
 /*main content keeps its white background but has same space to the side as header and footer*/
 main{
@@ -111,7 +107,7 @@ input[type="radio"]{
 	width: 1em;
 	vertical-align: baseline;
 	appearance: none;
-	color: var(--secondary);)
+	color: var(--secondary);
 	background-color: #fff;
 	border: 2px solid currentColor;
 	border-radius: 50%;
