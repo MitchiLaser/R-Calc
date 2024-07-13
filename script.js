@@ -112,9 +112,21 @@ window.addEventListener("load", function(){
 
 	var deviation = (target, result) => Math.abs(target-result);
 	var rdeviation = (target, result) => ((deviation(target, result) / target) * 100).toFixed(2);
+	var isExact = (deviation) => deviation <= Number.EPSILON;
+
+	// the function to perform all search operations for the different number of resistors
+	function searches(resistors, target) {
+		// 1 resistor: start looking for the closes value in the list
+		var res1 = search1(resistors, target);
+		var res1_dev = rdeviation(target, res1.intermediate);
+		add_to_table(res1, res1_dev);
+		if (isExact(res1_dev)) return; // found the exact value
+
+		// TODO continue with 2, 3 and 4 resistors
+	}
 
 	// search function for 1 resistor
-	var search1 = function(series, target) {
+	function search1 (series, target) {
 		// assign borders to the whole search space
 		var smaller = 0;
 		var larger = series.length-1;
@@ -130,17 +142,18 @@ window.addEventListener("load", function(){
 		 return new b_node((deviation(target,series[smaller]) < deviation(series[larger],target))?series[smaller]:series[larger]);
 	}
 
-	var add_to_table = function(result, deviation) {
+	function add_to_table (result, deviation) {
 		var table = document.getElementById('results_container');
 		var row = document.createElement('tr');
-		[
+		[ // create all 3 entries in a table row
 			Object.assign(document.createElement('td'), {innerText: `${result.repr()}`}),
 			Object.assign(document.createElement('td'), {innerText: `${result.intermediate.toFixed(2)}${prefix}Ω`}),
-			Object.assign(document.createElement('td'), {innerText: `${deviation}%`}),
+			Object.assign(document.createElement('td'), {innerText: (isExact(deviation))?"Exact":`${deviation}%`}),
 		].forEach(e => row.appendChild(e) )
 		table.appendChild(row);
 	}
 
+	// user-interface setup
 	Series.forEach( function(e) { // create selection button for each series
 		var new_node = document.getElementsByClassName("selection_row")[0].appendChild(Object.assign(document.createElement("li"), { // append new node (list-entry) to list
 			innerText: `E${e.length}`,
@@ -169,34 +182,22 @@ window.addEventListener("load", function(){
 		}
 	});
 
-	// add event listener to 'calculate' button
+	// add event listener to 'calculate' button to start the calculation
 	document.getElementById('submitbutton').addEventListener('click', function() {
-		// make the results section invisible
-		document.querySelector('#results').style.setProperty('visibility', 'collapse');
-
-		// clear table containing results
-		document.getElementById('results_container').innerHTML = '';
-
-		// get user input
+		document.querySelector('#results').style.setProperty('visibility', 'collapse'); // make the results section invisible
+		document.getElementById('results_container').innerHTML = ''; // clear table containing results
+		// get user input and check for validity
 		var resistance = parseFloat(document.getElementById('resistance').value);
 		if (ActiveSeries === undefined || prefix === undefined || isNaN(resistance)) {
 			console.error("Invalid input");
 			return;
 		}
-		// useful for debugging purposes
-		console.log(`Resistance: ${resistance}${prefix}Ω, Series: E${ActiveSeries.length}`);
-
-		var resistors = Object.freeze(prefixes.flatMap(p => ActiveSeries.map(r => r*p))); // create a list of all available resistors. By definition the list is sorted in ascending order
-
-		// 1 resistor: start looking for the closes value in the list
-		var res1 = search1(resistors, resistance);
-		console.log(res1);
-		add_to_table(res1, rdeviation(resistance, res1.intermediate));
-
-		// TODO continue with 2, 3 and 4 resistors
-
-		// last step: make the results section visible
-		document.querySelector('#results').style.setProperty('visibility', 'visible');
+		//console.log(`Resistance: ${resistance}${prefix}Ω, Series: E${ActiveSeries.length}`); // useful for debugging purposes
+		searches(
+			Object.freeze(prefixes.flatMap(p => ActiveSeries.map(r => r*p))), // create a list of all available resistors. By definition the list is sorted in ascending order
+			resistance
+		);
+		document.querySelector('#results').style.setProperty('visibility', 'visible'); // make the results section visible
 	})
 
 })
