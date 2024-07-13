@@ -41,7 +41,7 @@ window.addEventListener("load", function(){
 	const series = (a,b) => a+b;
 	const parallel = (a,b) => (a*b)/(a+b);
 
-	// create a data structure (binary tree) to store computation results with the necessary information to reconstruct the calculation
+	// create a data structure (unsorted binary tree) to store computation results with the necessary information to reconstruct the calculation
 	class b_node {
 		constructor(self) {
 			this.self = self;							// the resistor value or a combination
@@ -67,21 +67,42 @@ window.addEventListener("load", function(){
 
 		repr() { // return a string representation of the tree
 			// if the other branch is not defined than the node is a leaf
-			if (this.other === undefined) return this.self.toString(); // TODO: maybe trim to a decimal point, also at the other places
+			if (this.other === undefined) return this.self.toFixed(2); // trim after second decimal point
 
 			// get string representation of the two branches and add brackets if the combinator is different
 			if (this.self instanceof b_node) {
 				var self_str = (this.combinator == this.self.combinator || this.self.combinator == undefined)?this.self.repr():`(${this.self.repr()})`;
 			} else {
-				var self_str = this.self.toString();
+				var self_str = this.self.toFixed(2);
 			}
 			if (this.other instanceof b_node) {
 				var other_str = (this.combinator == this.other.combinator || this.other.combinator == undefined)?this.other.repr():`(${this.other.repr()})`;
 			} else {
-				var other_str = this.other.toString();
+				var other_str = this.other.toFixed(2);
 			}
 
 			return `${self_str} ${this.comb2str()} ${other_str}`;
+		}
+
+		// Dunno if i am ever going to use this. The function was written with the intention to scale the application that it can handle combinations of more than 4 resistors.
+		// This would introduce the problem of generating all possible network topologies and filtering out the duplicates. Filtering the duplicates can be done by comparing trees and
+		// checking if they are equal (recursively) which can only be done if the tree is simplified to reduce the number of possible equivalent tree topologies.
+		simplify() { // recursively simplify the tree by trying to remove nodes pointing to single values
+			if (this.combinator === undefined) return; // if the node is a leaf containing only one resistor value
+			// check the 'self' branch
+			if (this.self instanceof b_node) {
+				if (this.self.combinator === undefined)
+					this.self = this.self.self;
+				else
+					this.self.simplify();
+			}
+			// check the 'other' branch
+			if (this.other instanceof b_node) {
+				if (this.other.combinator === undefined)
+					this.other = this.other.self;
+				else
+					this.other.simplify();
+			}
 		}
 	}
 
@@ -129,8 +150,7 @@ window.addEventListener("load", function(){
 		}
 		console.log(`Resistance: ${resistance}${(Math.log10(prefix) != 0)?'e'+Math.log10(prefix):''}Ω, Series: E${ActiveSeries.length}`);
 
-		var resistors = Object.freeze(prefixes.flatMap(p => ActiveSeries.map(r => r*p))); // create a list of all available resistors
-		
+		var resistors = Object.freeze(prefixes.flatMap(p => ActiveSeries.map(r => r*p))); // create a list of all available resistors. By definition the list is sorted in ascending order
 		// TODO call the function to calculate the closest resistor value
 
 		// last step: make the results section visible
