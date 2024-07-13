@@ -31,7 +31,7 @@ window.addEventListener("load", function(){
 	Series.forEach(e => Object.freeze(e)); // freeze all arrays in this series
 
 	// generate the list of prefixes to multiply the resistor values with
-	var prefixes = Object.freeze([...Array(7).keys()].map(e => Math.pow(10, e))); // 10e0 to 10e6
+	var prefixes = Object.freeze([...Array(5).keys()].map(e => Math.pow(10, e))); // 10e0 to 10e4
 
 	// buffers to store the selected options
 	var ActiveSeries = undefined;
@@ -65,20 +65,24 @@ window.addEventListener("load", function(){
 			}
 		}
 
+		unit(value) {
+			return value.toFixed(2) + prefix + 'Ω';
+		}
+
 		repr() { // return a string representation of the tree
 			// if the other branch is not defined than the node is a leaf
-			if (this.other === undefined) return this.self.toFixed(2); // trim after second decimal point
+			if (this.other === undefined) return this.unit(this.self); // trim after second decimal point
 
 			// get string representation of the two branches and add brackets if the combinator is different
 			if (this.self instanceof b_node) {
 				var self_str = (this.combinator == this.self.combinator || this.self.combinator == undefined)?this.self.repr():`(${this.self.repr()})`;
 			} else {
-				var self_str = this.self.toFixed(2);
+				var self_str = this.unit(this.self);
 			}
 			if (this.other instanceof b_node) {
 				var other_str = (this.combinator == this.other.combinator || this.other.combinator == undefined)?this.other.repr():`(${this.other.repr()})`;
 			} else {
-				var other_str = this.other.toFixed(2);
+				var other_str = this.unit(this.other);
 			}
 
 			return `${self_str} ${this.comb2str()} ${other_str}`;
@@ -106,6 +110,37 @@ window.addEventListener("load", function(){
 		}
 	}
 
+	var deviation = (target, result) => Math.abs(target-result);
+	var rdeviation = (target, result) => ((deviation(target, result) / target) * 100).toFixed(2);
+
+	// search function for 1 resistor
+	var search1 = function(series, target) {
+		// assign borders to the whole search space
+		var smaller = 0;
+		var larger = series.length-1;
+		// binary search
+		while (larger - smaller > 1) {
+			var middle = Math.floor((larger+smaller)/2);
+			if (series[middle] < target)
+				smaller = middle;
+			else
+				larger = middle;
+		}
+		// check which one of the two matches better
+		 return new b_node((deviation(target,series[smaller]) < deviation(series[larger],target))?series[smaller]:series[larger]);
+	}
+
+	var add_to_table = function(result, deviation) {
+		var table = document.getElementById('results_container');
+		var row = document.createElement('tr');
+		[
+			Object.assign(document.createElement('td'), {innerText: `${result.repr()}`}),
+			Object.assign(document.createElement('td'), {innerText: `${result.intermediate.toFixed(2)}${prefix}Ω`}),
+			Object.assign(document.createElement('td'), {innerText: `${deviation}%`}),
+		].forEach(e => row.appendChild(e) )
+		table.appendChild(row);
+	}
+
 	Series.forEach( function(e) { // create selection button for each series
 		var new_node = document.getElementsByClassName("selection_row")[0].appendChild(Object.assign(document.createElement("li"), { // append new node (list-entry) to list
 			innerText: `E${e.length}`,
@@ -123,13 +158,13 @@ window.addEventListener("load", function(){
 
 	// add event listener to all radio buttons to change the prefix
 	document.querySelectorAll('input[type="radio"]').forEach(e => {e.addEventListener('click', function(e){
-			var localprefix = parseInt(e.target.getAttribute('prefix'));
+			var localprefix = e.target.getAttribute('prefix');
 			return function() {
 				prefix = localprefix;
 			} ();
 		});
 		if (e.hasAttribute('checked')) {
-			prefix = parseInt(e.getAttribute('prefix')); // find the default prefix in the HTML
+			prefix = e.getAttribute('prefix'); // find the default prefix in the HTML
 			e.click(); // make sure the default checkbox - browsers might not reset this after reloading the page
 		}
 	});
@@ -148,10 +183,17 @@ window.addEventListener("load", function(){
 			console.error("Invalid input");
 			return;
 		}
-		console.log(`Resistance: ${resistance}${(Math.log10(prefix) != 0)?'e'+Math.log10(prefix):''}Ω, Series: E${ActiveSeries.length}`);
+		// useful for debugging purposes
+		console.log(`Resistance: ${resistance}${prefix}Ω, Series: E${ActiveSeries.length}`);
 
 		var resistors = Object.freeze(prefixes.flatMap(p => ActiveSeries.map(r => r*p))); // create a list of all available resistors. By definition the list is sorted in ascending order
-		// TODO call the function to calculate the closest resistor value
+
+		// 1 resistor: start looking for the closes value in the list
+		var res1 = search1(resistors, resistance);
+		console.log(res1);
+		add_to_table(res1, rdeviation(resistance, res1.intermediate));
+
+		// TODO continue with 2, 3 and 4 resistors
 
 		// last step: make the results section visible
 		document.querySelector('#results').style.setProperty('visibility', 'visible');
