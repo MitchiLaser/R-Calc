@@ -72,7 +72,7 @@ window.addEventListener("DOMContentLoaded", function(){
 		}
 
 		unit(value) {
-			return value.toFixed(3) + prefix + 'Ω';
+			return value.toFixed(3) + prefix + 'Ω'; // TODO: make the number of digits after the decimal separator variable.
 		}
 
 		repr() { // return a string representation of the tree
@@ -162,46 +162,65 @@ window.addEventListener("DOMContentLoaded", function(){
 		r2_series = resistors.map((e,i) => resistors.slice(i).map(r => series(e,r)));
 		r2_parallel = resistors.map((e,i) => resistors.slice(i).map(r => parallel(e,r)));
 
-		var series_poss = r2_series.slice(
-			0, r2_series.findIndex(e => e[0] > target) // row with first element larger than target » cut at this upper bound
-		).map(e => binsearch(e, target)); // perform binary search on each row to get possible candidates
-		// TODO: theoretically it should be possible to perform a second binary search instead of the line below.
-		var series_best = series_poss.reduce((accu, curr_val, index, arr) => (deviation(r2_series[index][curr_val], target) < deviation(r2_series[accu][arr[accu]], target))?index:accu, 0); // compare deviations to get index of best candidate
-		var series_res = new b_node(resistors[series_best]).attach(resistors[series_poss[series_best] + series_best], series); // parse to wrapper class
+		function deepsearch_2(table, target) {
+			var poss = table.slice(
+				0, table.findIndex(e => e[0] > target) // row with first element larger than target » cut at this upper bound
+			).map(e => binsearch(e, target)); // perform binary search on each row to get possible candidates
+			var best = poss.reduce((accu, curr_val, index, arr) => (deviation(table[index][curr_val], target) < deviation(table[accu][arr[accu]], target))?index:accu, 0); // compare deviations to get index of best candidate
+			return [best, poss[best]+best];
+		}
 
-		var parallel_poss = r2_parallel.slice(
-			0, r2_parallel.findIndex(e => e[0] > target) // row with first element larger than target » cut at this upper bound
-		).map(e => binsearch(e, target)); // perform binary search on each row to get possible candidates
-		// TODO: theoretically it should be possible to perform a second binary search instead of the line below.
-		var parallel_best = parallel_poss.reduce((accu, curr_val, index, arr) => (deviation(r2_parallel[index][curr_val], target) < deviation(r2_parallel[accu][arr[accu]], target))?index:accu, 0); // compare deviations to get index of best candidate
-		var parallel_res = new b_node(resistors[parallel_best]).attach(resistors[parallel_poss[parallel_best] + parallel_best], parallel); // parse to wrapper class
+		var series_match = deepsearch_2(r2_series, target);
+		var series_res = new b_node(resistors[series_match[0]]).attach(resistors[series_match[1]], series); // parse to wrapper class
+
+		var parallel_match = deepsearch_2(r2_parallel, target);
+		var parallel_res = new b_node(resistors[parallel_match[0]]).attach(resistors[parallel_match[1]], parallel); // parse to wrapper class
 
 		// return value with smaller deviation
 		return (deviation(series_res.intermediate, target) < deviation(parallel_res.intermediate, target))?series_res:parallel_res;
 	}
 
 	function search3(resistors, target) {
-		var best_matches = [];
+		var best_matches = new Array();
+		var table, result; // declare variables for later use
+
+		function deepsearch_3(table, target) { // perform search on 3 dimensional table
+			var results_poss, results_fav, best_match, ind2, ind3; // declare variables for later use
+			results_poss = table.map(e => e.map(f => binsearch(f, target)));
+			results_fav = results_poss.map((e,i) => e.reduce((accu, curr_val, index, arr) => (deviation(table[i][index][curr_val], target) < deviation(table[i][accu][arr[accu]], target))?index:accu, 0));
+			best_match = results_fav.reduce((accu, curr_val, index, arr) => { // do the same thing as for r2_series but twice
+				var d_new = deviation(table[index][curr_val][results_poss[index][curr_val]], target); 
+				var d_acc = deviation(table[accu][arr[accu]][results_poss[accu][arr[accu]]], target);
+				return (d_new < d_acc)?index:accu;
+			}, 0);
+			// normalize result by creating a b_node object with correct indices
+			ind2 = results_fav[best_match] + best_match;
+			ind3 = ind2 + results_poss[best_match][results_fav[best_match]];
+			return [best_match, ind2, ind3];
+		}
+
 		// first possibility: 3 resistors in series R1+R2+R3
-		var table = r2_series.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => series(f,g)))); // lookup table with all values, cutting by permutations, no cut by value (skill issue)
-		var results_poss = table.map(e => e.map(f => binsearch(f, target)));
-		var results_fav = results_poss.map((e,i) => e.reduce((accu, curr_val, index, arr) => (deviation(table[i][index][curr_val], target) < deviation(table[i][accu][arr[accu]], target))?index:accu, 0));
-		var best_match = results_fav.reduce((accu, curr_val, index, arr) => { // do the same thing as for r2_series but twice
-			var d_new = deviation(table[index][curr_val][results_poss[index][curr_val]], target); 
-			var d_acc = deviation(table[accu][arr[accu]][results_poss[accu][arr[accu]]], target);
-			return (d_new < d_acc)?index:accu;
-		}, 0);
-		// normalize result by creating a b_node object with correct indices
-		var ind2 = results_fav[best_match] + best_match;
-		var ind3 = ind2 + results_poss[best_match][results_fav[best_match]];
-		var result = new b_node(resistors[best_match]).attach(new b_node(resistors[ind2]).attach(resistors[ind3], series), series);
-		// add to list of possible results
-		best_matches.push(result);
+		table = r2_series.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => series(f,g)))); // lookup table with all values, cutting by permutations, no cut by value (skill issue, maybe todo for later?)
+		result = deepsearch_3(table, target);
+		best_matches.push(new b_node(resistors[result[0]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[2]], series), series)); // add to list of possible results
 		
+		// second possibility: 3 resistors in parallel R1||R2||R3
+		table = r2_parallel.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => parallel(f,g)))); // lookup table with all values, cutting by permutations, no cut by value (skill issue, maybe todo for later?)
+		result = deepsearch_3(table, target);
+		best_matches.push(new b_node(resistors[result[0]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[2]], parallel), parallel)); // add to list of possible results
+
+		// TODO: debugging
+		/*
+		console.log(resistors);
+		console.log(table);
+		console.log(results_poss);
+		console.log(results_fav);
+		console.log(best_match);
+		*/
+
 		// TODO
-		// second possibility: 2 resistors in series with 1 in parallel (R1+R2)||R3
-		// third possibility: 1 resistor in series after 2 in parallel R1+(R2||R3)
-		// fourth possibility: 3 resistors in parallel R1||R2||R3
+		// third possibility: 2 resistors in series with 1 in parallel (R1+R2)||R3
+		// fourth possibility: 1 resistor in series after 2 in parallel R1+(R2||R3)
 		//
 		// TODO
 		// return the best result from result list
@@ -257,7 +276,6 @@ window.addEventListener("DOMContentLoaded", function(){
 			console.error("Invalid input");
 			return;
 		}
-		//console.log(`Resistance: ${resistance}${prefix}Ω, Series: E${ActiveSeries.length}`); // useful for debugging purposes
 		const start = performance.now();
 		searches(
 			Object.freeze(prefixes.flatMap(p => ActiveSeries.map(r => r*p))), // create a list of all available resistors. By definition the list is sorted in ascending order
