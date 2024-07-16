@@ -76,7 +76,7 @@ window.addEventListener("DOMContentLoaded", function(){
 		}
 
 		repr() { // return a string representation of the tree
-			this.simplify(); // simplify the tree before generating the string representation
+			this.simplify(); // simplify the tree before generating the string representation. This removes problems which might occur 5 lines below this comment
 			// if the other branch is not defined than the node is a leaf
 			if (this.combinator === undefined) return this.unit(this.self); // trim after second decimal point
 
@@ -95,10 +95,7 @@ window.addEventListener("DOMContentLoaded", function(){
 			return `${self_str} ${this.comb2str()} ${other_str}`;
 		}
 
-		// Dunno if i am ever going to use this. The function was written with the intention to scale the application that it can handle combinations of more than 4 resistors.
-		// This would introduce the problem of generating all possible network topologies and filtering out the duplicates. Filtering the duplicates can be done by comparing trees and
-		// checking if they are equal (recursively) which can only be done if the tree is simplified to reduce the number of possible equivalent tree topologies.
-		simplify() { // recursively simplify the tree by trying to remove nodes pointing to single values
+		simplify() { // recursively simplify the tree by trying to replace branches of b_nodes with single values by the value itself
 			if (this.combinator === undefined) return; // if the node is a leaf containing only one resistor value
 			// check the 'self' branch
 			if (this.self instanceof b_node) {
@@ -136,6 +133,7 @@ window.addEventListener("DOMContentLoaded", function(){
 		if (float_equal(res_dev)) return; // found the exact value
 
 		// TODO continue with 3 and 4 resistors
+		search3(resistors, target);
 	}
 
 	// perform a binary search on an array to find the closest value to the target and return the corresponding index
@@ -167,12 +165,14 @@ window.addEventListener("DOMContentLoaded", function(){
 		var series_poss = r2_series.slice(
 			0, r2_series.findIndex(e => e[0] > target) // row with first element larger than target » cut at this upper bound
 		).map(e => binsearch(e, target)); // perform binary search on each row to get possible candidates
+		// TODO: theoretically it should be possible to perform a second binary search instead of the line below.
 		var series_best = series_poss.reduce((accu, curr_val, index, arr) => (deviation(r2_series[index][curr_val], target) < deviation(r2_series[accu][arr[accu]], target))?index:accu, 0); // compare deviations to get index of best candidate
 		var series_res = new b_node(resistors[series_best]).attach(resistors[series_poss[series_best] + series_best], series); // parse to wrapper class
 
 		var parallel_poss = r2_parallel.slice(
 			0, r2_parallel.findIndex(e => e[0] > target) // row with first element larger than target » cut at this upper bound
 		).map(e => binsearch(e, target)); // perform binary search on each row to get possible candidates
+		// TODO: theoretically it should be possible to perform a second binary search instead of the line below.
 		var parallel_best = parallel_poss.reduce((accu, curr_val, index, arr) => (deviation(r2_parallel[index][curr_val], target) < deviation(r2_parallel[accu][arr[accu]], target))?index:accu, 0); // compare deviations to get index of best candidate
 		var parallel_res = new b_node(resistors[parallel_best]).attach(resistors[parallel_poss[parallel_best] + parallel_best], parallel); // parse to wrapper class
 
@@ -181,7 +181,30 @@ window.addEventListener("DOMContentLoaded", function(){
 	}
 
 	function search3(resistors, target) {
+		var best_matches = [];
+		// first possibility: 3 resistors in series R1+R2+R3
+		var table = r2_series.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => series(f,g)))); // lookup table with all values, cutting by permutations, no cut by value (skill issue)
+		var results_poss = table.map(e => e.map(f => binsearch(f, target)));
+		var results_fav = results_poss.map((e,i) => e.reduce((accu, curr_val, index, arr) => (deviation(table[i][index][curr_val], target) < deviation(table[i][accu][arr[accu]], target))?index:accu, 0));
+		var best_match = results_fav.reduce((accu, curr_val, index, arr) => { // do the same thing as for r2_series but twice
+			var d_new = deviation(table[index][curr_val][results_poss[index][curr_val]], target); 
+			var d_acc = deviation(table[accu][arr[accu]][results_poss[accu][arr[accu]]], target);
+			return (d_new < d_acc)?index:accu;
+		}, 0);
+		// normalize result by creating a b_node object with correct indices
+		var ind2 = results_fav[best_match] + best_match;
+		var ind3 = ind2 + results_poss[best_match][results_fav[best_match]];
+		var result = new b_node(resistors[best_match]).attach(new b_node(resistors[ind2]).attach(resistors[ind3], series), series);
+		// add to list of possible results
+		best_matches.push(result);
+		
 		// TODO
+		// second possibility: 2 resistors in series with 1 in parallel (R1+R2)||R3
+		// third possibility: 1 resistor in series after 2 in parallel R1+(R2||R3)
+		// fourth possibility: 3 resistors in parallel R1||R2||R3
+		//
+		// TODO
+		// return the best result from result list
 	}
 
 	function add_to_table (result, deviation) {
