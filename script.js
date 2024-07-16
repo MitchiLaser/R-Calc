@@ -132,8 +132,13 @@ window.addEventListener("DOMContentLoaded", function(){
 		add_to_table(res, res_dev);
 		if (float_equal(res_dev)) return; // found the exact value
 
-		// TODO continue with 3 and 4 resistors
-		search3(resistors, target);
+		// 3 resistors: the same as for 2 resistors but afterwards an additional dimension needs to be reduced and restored for the index mapping
+		var res = search3(resistors, target);
+		var res_dev = rdeviation(target, res.intermediate);
+		add_to_table(res, res_dev);
+		if (float_equal(res_dev)) return; // found the exact value
+
+		// TODO continue with 4 resistors
 	}
 
 	// perform a binary search on an array to find the closest value to the target and return the corresponding index
@@ -184,46 +189,45 @@ window.addEventListener("DOMContentLoaded", function(){
 		var best_matches = new Array();
 		var table, result; // declare variables for later use
 
-		function deepsearch_3(table, target) { // perform search on 3 dimensional table
+		function deepsearch_3(table, target, second_slice) { // perform search on 3 dimensional table
 			var results_poss, results_fav, best_match, ind2, ind3; // declare variables for later use
 			results_poss = table.map(e => e.map(f => binsearch(f, target)));
 			results_fav = results_poss.map((e,i) => e.reduce((accu, curr_val, index, arr) => (deviation(table[i][index][curr_val], target) < deviation(table[i][accu][arr[accu]], target))?index:accu, 0));
 			best_match = results_fav.reduce((accu, curr_val, index, arr) => { // do the same thing as for r2_series but twice
-				var d_new = deviation(table[index][curr_val][results_poss[index][curr_val]], target); 
+				var d_new = deviation(table[index][curr_val][results_poss[index][curr_val]], target);
 				var d_acc = deviation(table[accu][arr[accu]][results_poss[accu][arr[accu]]], target);
 				return (d_new < d_acc)?index:accu;
 			}, 0);
 			// normalize result by creating a b_node object with correct indices
 			ind2 = results_fav[best_match] + best_match;
-			ind3 = ind2 + results_poss[best_match][results_fav[best_match]];
+			ind3 = results_poss[best_match][results_fav[best_match]];
+			ind3 += (second_slice)?ind2:0; // if there was no second slice than the previous indexes don't have to be added to the offset in the triu representation
 			return [best_match, ind2, ind3];
 		}
 
 		// first possibility: 3 resistors in series R1+R2+R3
-		table = r2_series.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => series(f,g)))); // lookup table with all values, cutting by permutations, no cut by value (skill issue, maybe todo for later?)
-		result = deepsearch_3(table, target);
+		table = r2_series.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => series(f,g)))); // lookup table with all values, cutting by permutations, no cut by value
+		result = deepsearch_3(table, target, true);
 		best_matches.push(new b_node(resistors[result[0]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[2]], series), series)); // add to list of possible results
-		
+
 		// second possibility: 3 resistors in parallel R1||R2||R3
-		table = r2_parallel.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => parallel(f,g)))); // lookup table with all values, cutting by permutations, no cut by value (skill issue, maybe todo for later?)
-		result = deepsearch_3(table, target);
+		table = r2_parallel.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => parallel(f,g)))); // lookup table with all values, cutting by permutations, no cut by value
+		result = deepsearch_3(table, target, true);
 		best_matches.push(new b_node(resistors[result[0]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[2]], parallel), parallel)); // add to list of possible results
 
-		// TODO: debugging
-		/*
-		console.log(resistors);
-		console.log(table);
-		console.log(results_poss);
-		console.log(results_fav);
-		console.log(best_match);
-		*/
-
-		// TODO
 		// third possibility: 2 resistors in series with 1 in parallel (R1+R2)||R3
+		table = r2_series.map((e,i) => e.map((f,j) => resistors.map(g => parallel(f,g)))); // lookup table with all values, no cut allowed in this combination
+		result = deepsearch_3(table, target, false);
+		best_matches.push(new b_node(resistors[result[2]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[0]], series), parallel)); // add to list of possible results
+
 		// fourth possibility: 1 resistor in series after 2 in parallel R1+(R2||R3)
-		//
-		// TODO
-		// return the best result from result list
+		table = r2_parallel.map((e,i) => e.map((f,j) => resistors.map(g => series(f,g)))); // lookup table with all values, no cut allowed in this combination
+		result = deepsearch_3(table, target, false);
+		best_matches.push(new b_node(resistors[result[2]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[0]], parallel), series)); // add to list of possible results
+
+		return best_matches[
+			best_matches.reduce((accu, curr, index, arr) => (deviation(curr.intermediate, target) < deviation(arr[accu].intermediate, target))?index:accu, 0)
+		]; // return the best result from result list
 	}
 
 	function add_to_table (result, deviation) {
@@ -282,7 +286,7 @@ window.addEventListener("DOMContentLoaded", function(){
 			resistance
 		);
 		const stop = performance.now();
-		console.log(`${stop - start}ms`);
+		//console.log(`${stop - start}ms`); // TODO: this is only in use for debugging purposes
 		document.querySelector('#results').style.setProperty('visibility', 'visible'); // make the results section visible
 	})
 
