@@ -167,7 +167,7 @@ window.addEventListener("DOMContentLoaded", function(){
 		r2_series = resistors.map((e,i) => resistors.slice(i).map(r => series(e,r)));
 		r2_parallel = resistors.map((e,i) => resistors.slice(i).map(r => parallel(e,r)));
 
-		function deepsearch_2(table, target) {
+		function deepsearch(table, target) {
 			var poss = table.slice(
 				0, table.findIndex(e => e[0] > target) // row with first element larger than target » cut at this upper bound
 			).map(e => binsearch(e, target)); // perform binary search on each row to get possible candidates
@@ -175,10 +175,10 @@ window.addEventListener("DOMContentLoaded", function(){
 			return [best, poss[best]+best];
 		}
 
-		var series_match = deepsearch_2(r2_series, target);
+		var series_match = deepsearch(r2_series, target);
 		var series_res = new b_node(resistors[series_match[0]]).attach(resistors[series_match[1]], series); // parse to wrapper class
 
-		var parallel_match = deepsearch_2(r2_parallel, target);
+		var parallel_match = deepsearch(r2_parallel, target);
 		var parallel_res = new b_node(resistors[parallel_match[0]]).attach(resistors[parallel_match[1]], parallel); // parse to wrapper class
 
 		// return value with smaller deviation
@@ -189,7 +189,7 @@ window.addEventListener("DOMContentLoaded", function(){
 		var best_matches = new Array();
 		var table, result; // declare variables for later use
 
-		function deepsearch_3(table, target, second_slice) { // perform search on 3 dimensional table
+		function deepsearch(table, target, second_slice) { // perform search on 3 dimensional table
 			var results_poss, results_fav, best_match, ind2, ind3; // declare variables for later use
 			results_poss = table.map(e => e.map(f => binsearch(f, target)));
 			results_fav = results_poss.map((e,i) => e.reduce((accu, curr_val, index, arr) => (deviation(table[i][index][curr_val], target) < deviation(table[i][accu][arr[accu]], target))?index:accu, 0));
@@ -207,22 +207,22 @@ window.addEventListener("DOMContentLoaded", function(){
 
 		// first possibility: 3 resistors in series R1+R2+R3
 		table = r2_series.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => series(f,g)))); // lookup table with all values, cutting by permutations, no cut by value
-		result = deepsearch_3(table, target, true);
+		result = deepsearch(table, target, true);
 		best_matches.push(new b_node(resistors[result[0]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[2]], series), series)); // add to list of possible results
 
 		// second possibility: 3 resistors in parallel R1||R2||R3
 		table = r2_parallel.map((e,i) => e.map((f,j) => resistors.slice(i+j).map(g => parallel(f,g)))); // lookup table with all values, cutting by permutations, no cut by value
-		result = deepsearch_3(table, target, true);
+		result = deepsearch(table, target, true);
 		best_matches.push(new b_node(resistors[result[0]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[2]], parallel), parallel)); // add to list of possible results
 
 		// third possibility: 2 resistors in series with 1 in parallel (R1+R2)||R3
 		table = r2_series.map((e,i) => e.map((f,j) => resistors.map(g => parallel(f,g)))); // lookup table with all values, no cut allowed in this combination
-		result = deepsearch_3(table, target, false);
+		result = deepsearch(table, target, false);
 		best_matches.push(new b_node(resistors[result[2]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[0]], series), parallel)); // add to list of possible results
 
 		// fourth possibility: 1 resistor in series after 2 in parallel R1+(R2||R3)
 		table = r2_parallel.map((e,i) => e.map((f,j) => resistors.map(g => series(f,g)))); // lookup table with all values, no cut allowed in this combination
-		result = deepsearch_3(table, target, false);
+		result = deepsearch(table, target, false);
 		best_matches.push(new b_node(resistors[result[2]]).attach(new b_node(resistors[result[1]]).attach(resistors[result[0]], parallel), series)); // add to list of possible results
 
 		return best_matches[
