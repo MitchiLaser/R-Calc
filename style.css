@@ -87,6 +87,9 @@ label,
 input{
 	cursor: pointer;
 }
+label{
+	padding-left: 0.5rem;
+}
 /*Number input field*/
 input[type="number"]{
 	outline: none;
@@ -101,7 +104,7 @@ input[type="number"]:focus{
 }
 /*Radio Buttons*/
 input[type="radio"]{
-	margin: auto 0.5rem auto 1rem;
+	margin: auto 0 auto 1rem;
 	box-sizing: border-box;
 	height: 1em;
 	width: 1em;

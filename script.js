@@ -2,7 +2,7 @@
 /*global window */
 'use strict';
 
-window.addEventListener("load", function(){
+window.addEventListener("DOMContentLoaded", function(){
 	// generate E-Series as object and fill in the missing fields in the UI
 	var Series = Object.freeze( // freezing prevents editing of object
 		[
@@ -31,11 +31,16 @@ window.addEventListener("load", function(){
 	Series.forEach(e => Object.freeze(e)); // freeze all arrays in this series
 
 	// generate the list of prefixes to multiply the resistor values with
-	var prefixes = Object.freeze([...Array(5).keys()].map(e => Math.pow(10, e))); // 10e0 to 10e4
+	// The precision of floating point variables decreases with higher numbers. Therefore, keeping the range of resistors smaller
+	// and compensating the range with a pseudo-prefix by writing "k" or "M" in the UI increases the precision of the calculation.
+	var prefixes = Object.freeze([...Array(8).keys()].map(e => Math.pow(10, e-3))); // 10e-3 to 10e4
 
 	// buffers to store the selected options
 	var ActiveSeries = undefined;
 	var prefix = undefined;
+
+	// lookup tables for the possible combinations of 2 resistors » speed up computation by reusing this lookup
+	var r2_series, r2_parallel;
 
 	// define the two function for the available combinators
 	const series = (a,b) => a+b;
@@ -55,6 +60,7 @@ window.addEventListener("load", function(){
 			this.combinator = combinator;
 			// update intermediate with the newly attached value (possibly overwrite old intermediate value)
 			this.intermediate = combinator((this.self instanceof b_node)?this.self.intermediate:this.self, (other instanceof b_node)?other.intermediate:other);
+			return this;
 		}
 
 		comb2str() { // return a string representation of the combinator
@@ -66,12 +72,13 @@ window.addEventListener("load", function(){
 		}
 
 		unit(value) {
-			return value.toFixed(2) + prefix + 'Ω';
+			return value.toFixed(3) + prefix + 'Ω';
 		}
 
 		repr() { // return a string representation of the tree
+			this.simplify(); // simplify the tree before generating the string representation
 			// if the other branch is not defined than the node is a leaf
-			if (this.other === undefined) return this.unit(this.self); // trim after second decimal point
+			if (this.combinator === undefined) return this.unit(this.self); // trim after second decimal point
 
 			// get string representation of the two branches and add brackets if the combinator is different
 			if (this.self instanceof b_node) {
@@ -111,35 +118,70 @@ window.addEventListener("load", function(){
 	}
 
 	var deviation = (target, result) => Math.abs(target-result);
-	var rdeviation = (target, result) => ((deviation(target, result) / target) * 100).toFixed(2);
-	var isExact = (deviation) => deviation <= Number.EPSILON;
+	var rdeviation = (target, result) => ((deviation(target, result) / target) * 100).toFixed(3);
+	var float_equal = (deviation) => deviation <= Number.EPSILON;
 
 	// the function to perform all search operations for the different number of resistors
 	function searches(resistors, target) {
 		// 1 resistor: start looking for the closes value in the list
-		var res1 = search1(resistors, target);
-		var res1_dev = rdeviation(target, res1.intermediate);
-		add_to_table(res1, res1_dev);
-		if (isExact(res1_dev)) return; // found the exact value
+		var res = search1(resistors, target);
+		var res_dev = rdeviation(target, res.intermediate);
+		add_to_table(res, res_dev);
+		if (float_equal(res_dev)) return; // found the exact value
 
-		// TODO continue with 2, 3 and 4 resistors
+		// 2 resistors: make a binary search in the lookup table and then compare all matches
+		var res = search2(resistors, target);
+		var res_dev = rdeviation(target, res.intermediate);
+		add_to_table(res, res_dev);
+		if (float_equal(res_dev)) return; // found the exact value
+
+		// TODO continue with 3 and 4 resistors
 	}
 
-	// search function for 1 resistor
-	function search1 (series, target) {
+	// perform a binary search on an array to find the closest value to the target and return the corresponding index
+	function binsearch(resistors, target) {
 		// assign borders to the whole search space
 		var smaller = 0;
-		var larger = series.length-1;
+		var larger = resistors.length-1;
 		// binary search
 		while (larger - smaller > 1) {
 			var middle = Math.floor((larger+smaller)/2);
-			if (series[middle] < target)
+			if (resistors[middle] < target)
 				smaller = middle;
 			else
 				larger = middle;
 		}
-		// check which one of the two matches better
-		 return new b_node((deviation(target,series[smaller]) < deviation(series[larger],target))?series[smaller]:series[larger]);
+		return (deviation(target,resistors[smaller]) < deviation(resistors[larger],target))?smaller:larger; // return index in array with closest match
+	}
+
+	// perform binsearch and wrap result into the right data structure
+	function search1(resistors, target) {
+		return new b_node(resistors[binsearch(resistors, target)]);
+	}
+
+	function search2(resistors, target) {
+		// create lookup tables for 2 resistors. Since '+' is a commutative operation only half the results are needed » triu
+		r2_series = resistors.map((e,i) => resistors.slice(i).map(r => series(e,r)));
+		r2_parallel = resistors.map((e,i) => resistors.slice(i).map(r => parallel(e,r)));
+
+		var series_poss = r2_series.slice(
+			0, r2_series.findIndex(e => e[0] > target) // row with first element larger than target » cut at this upper bound
+		).map(e => binsearch(e, target)); // perform binary search on each row to get possible candidates
+		var series_best = series_poss.reduce((accu, curr_val, index, arr) => (deviation(r2_series[index][curr_val], target) < deviation(r2_series[accu][arr[accu]], target))?index:accu, 0); // compare deviations to get index of best candidate
+		var series_res = new b_node(resistors[series_best]).attach(resistors[series_poss[series_best] + series_best], series); // parse to wrapper class
+
+		var parallel_poss = r2_parallel.slice(
+			0, r2_parallel.findIndex(e => e[0] > target) // row with first element larger than target » cut at this upper bound
+		).map(e => binsearch(e, target)); // perform binary search on each row to get possible candidates
+		var parallel_best = parallel_poss.reduce((accu, curr_val, index, arr) => (deviation(r2_parallel[index][curr_val], target) < deviation(r2_parallel[accu][arr[accu]], target))?index:accu, 0); // compare deviations to get index of best candidate
+		var parallel_res = new b_node(resistors[parallel_best]).attach(resistors[parallel_poss[parallel_best] + parallel_best], parallel); // parse to wrapper class
+
+		// return value with smaller deviation
+		return (deviation(series_res.intermediate, target) < deviation(parallel_res.intermediate, target))?series_res:parallel_res;
+	}
+
+	function search3(resistors, target) {
+		// TODO
 	}
 
 	function add_to_table (result, deviation) {
@@ -147,8 +189,8 @@ window.addEventListener("load", function(){
 		var row = document.createElement('tr');
 		[ // create all 3 entries in a table row
 			Object.assign(document.createElement('td'), {innerText: `${result.repr()}`}),
-			Object.assign(document.createElement('td'), {innerText: `${result.intermediate.toFixed(2)}${prefix}Ω`}),
-			Object.assign(document.createElement('td'), {innerText: (isExact(deviation))?"Exact":`${deviation}%`}),
+			Object.assign(document.createElement('td'), {innerText: `${result.intermediate.toFixed(3)}${prefix}Ω`}),
+			Object.assign(document.createElement('td'), {innerText: (float_equal(deviation))?"Exact":`${deviation}%`}),
 		].forEach(e => row.appendChild(e) )
 		table.appendChild(row);
 	}
@@ -193,10 +235,13 @@ window.addEventListener("load", function(){
 			return;
 		}
 		//console.log(`Resistance: ${resistance}${prefix}Ω, Series: E${ActiveSeries.length}`); // useful for debugging purposes
+		const start = performance.now();
 		searches(
 			Object.freeze(prefixes.flatMap(p => ActiveSeries.map(r => r*p))), // create a list of all available resistors. By definition the list is sorted in ascending order
 			resistance
 		);
+		const stop = performance.now();
+		console.log(`${stop - start}ms`);
 		document.querySelector('#results').style.setProperty('visibility', 'visible'); // make the results section visible
 	})
 
